@@ -30,11 +30,24 @@ class UserService {
   };
 
   static createUser = async (req, res) => {
-    if (!req.body.firebaseId || !req.body.email || !req.body.name) {
+    const firebaseId = req.body.firebaseId;
+    const email = req.body.email;
+    const name = req.body.name;
+
+    if (!firebaseId || !email || !name) {
       return ResponseEntity.errorNullResponse(res);
     }
 
-    const user = await User.create(req.body);
+    const userBody = {
+      firebaseId: firebaseId,
+      email: email,
+      name: name,
+      cart: [],
+      order: [],
+      history: [],
+    };
+
+    const user = await User.create(userBody);
 
     return ResponseEntity.successfulResponse({ user }, res);
   };
@@ -89,21 +102,41 @@ class UserService {
 
   static addToCart = async (req, res) => {
     const email = req.body.email;
+    const cartId = uid.generate();
     const restaurantId = req.body.restaurantId;
+    const order = {
+      menu: req.body.menu,
+      price: req.body.price,
+      quantity: req.body.quantity,
+    };
 
-    if (!email || !restaurantId) {
+    let cart = {};
+
+    if (
+      !email ||
+      !restaurantId ||
+      !order.menu ||
+      !order.price ||
+      !order.quantity
+    ) {
       return ResponseEntity.errorNullResponse(res);
     }
 
-    const user = await User.findOneAndUpdate(
+    const user = await User.findOne({
+      email: email,
+    });
+
+    if (!user) {
+      return ResponseEntity.errorNotFoundResponse(userObj, res);
+    }
+
+    cart = await User.findOneAndUpdate(
       {
-        email: email,
+        "cart.restaurantId": restaurantId,
       },
       {
         $push: {
-          cart: {
-            restaurantId: restaurantId,
-          },
+          "cart.$.menuList": order,
         },
       },
       {
@@ -112,24 +145,41 @@ class UserService {
       }
     ).select("cart");
 
-    if (!user) {
-      return ResponseEntity.errorNotFoundResponse(userObj, res);
+    if (!cart) {
+      cart = await User.findOneAndUpdate(
+        {
+          email: email,
+        },
+        {
+          $push: {
+            cart: {
+              cartId: cartId,
+              restaurantId: restaurantId,
+              orderList: [order],
+            },
+          },
+        },
+        {
+          new: true,
+          runValidators: true,
+        }
+      ).select("cart");
     }
 
-    return ResponseEntity.successfulResponse({ user }, res);
+    return ResponseEntity.successfulResponse({ cart }, res);
   };
-  
-  static confirmOrder = async (req, res) => {
-    const email = req.body.email;
-    const orderId = uid.generate();
 
-    if (!email) {
+  static checkoutOrder = async (req, res) => {
+    const orderId = uid.generate();
+    const cartId = req.body.cartId;
+
+    if (!cartId) {
       return ResponseEntity.errorNullResponse(res);
     }
 
-    const user = await User.findOneAndUpdate(
+    const order = await User.findOneAndUpdate(
       {
-        email: email,
+        "cart.cartId": cartId,
       },
       {
         $push: {
@@ -137,18 +187,23 @@ class UserService {
             orderId: orderId,
           },
         },
+        $pull: {
+          cart: {
+            cartId: cartId,
+          },
+        },
       },
       {
         new: true,
         runValidators: true,
       }
-    ).select("cart");
+    ).select("order");
 
-    if (!user) {
-      return ResponseEntity.errorNotFoundResponse(userObj, res);
+    if (!order) {
+      return ResponseEntity.errorNotFoundResponse("Cart", res);
     }
 
-    return ResponseEntity.successfulResponse({ user }, res);
+    return ResponseEntity.successfulResponse({ order }, res);
   };
 
   static getCart = async (req, res) => {
@@ -158,15 +213,15 @@ class UserService {
       return ResponseEntity.errorNullResponse(res);
     }
 
-    const user = await User.findOne({
+    const cart = await User.findOne({
       email: email,
     }).select("cart");
 
-    if (!user) {
+    if (!cart) {
       return ResponseEntity.errorNotFoundResponse(userObj, res);
     }
 
-    return ResponseEntity.successfulResponse({ user }, res);
+    return ResponseEntity.successfulResponse({ cart }, res);
   };
 }
 

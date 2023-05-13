@@ -18,7 +18,9 @@ const main = async () => {
 
     return mainApp();
   }
-  
+
+  console.log("Connection failed.");
+
   return null;
 };
 

@@ -20,11 +20,15 @@ class AdminService {
       return ResponseEntity.errorNotFoundResponse(adminObj, res);
     }
 
-    return ResponseEntity.successfulResponse({ admin: admin }, res);
+    return ResponseEntity.successfulResponse({ admin }, res);
   };
 
   static createAdmin = async (req, res) => {
-    if (!req.body.firebaseId || !req.body.email || !req.body.name) {
+    const firebaseId = req.body.firebaseId;
+    const email = req.body.email;
+    const name = req.body.name;
+
+    if (!firebaseId || !email || !name) {
       return ResponseEntity.errorNullResponse(res);
     }
 
@@ -81,7 +85,7 @@ class AdminService {
     });
   };
 
-  static getRestaurant = async (req, res) => {
+  static getAllRestaurant = async (req, res) => {
     const email = req.body.email;
 
     if (!email) {
@@ -126,6 +130,14 @@ class AdminService {
       return ResponseEntity.errorNullResponse(res);
     }
 
+    const adminFind = await Admin.findOne({
+      email: email,
+    });
+
+    if (!adminFind) {
+      return ResponseEntity.errorNotFoundResponse(adminObj, res);
+    }
+
     const admin = await Admin.findOneAndUpdate(
       {
         email: email,
@@ -149,30 +161,35 @@ class AdminService {
   };
 
   static addMenu = async (req, res) => {
-    const email = req.body.email;
     const restaurantId = req.body.restaurantId;
     const menuId = uid.generate();
     const title = req.body.title;
     const description = req.body.description;
     const price = req.body.price;
 
-    if (!email || !restaurantId || !title || !description || !price) {
+    if (!restaurantId || !title || !description || !price) {
       return ResponseEntity.errorNullResponse(res);
+    }
+
+    const restaurantFind = await Admin.findOne({
+      "restaurant.restaurantId": restaurantId,
+    });
+
+    if (!restaurantFind) {
+      return ResponseEntity.errorNotFoundResponse("Restaurant", res);
     }
 
     const admin = await Admin.findOneAndUpdate(
       {
-        email: email,
+        "restaurant.restaurantId": restaurantId,
       },
       {
         $push: {
-          restaurant: {
-            menu: {
-              menuId: menuId,
-              title: title,
-              description: description,
-              price: price
-            }
+          "restaurant.$.menu": {
+            menuId: menuId,
+            title: title,
+            description: description,
+            price: price,
           },
         },
       },
@@ -180,7 +197,7 @@ class AdminService {
         new: true,
         runValidators: true,
       }
-    ).select("restaurant");
+    ).select("restaurant.menu");
 
     return ResponseEntity.successfulResponse({ admin }, res);
   };
