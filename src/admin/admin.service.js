@@ -6,14 +6,14 @@ const ResponseEntity = require("../entities/response.entity");
 
 class AdminService {
   static getAdmin = async (req, res) => {
-    const email = req.body.email;
+    const firebaseId = req.query.email;
 
-    if (!email) {
+    if (!firebaseId) {
       return ResponseEntity.errorNullResponse(res);
     }
 
     const admin = await Admin.findOne({
-      email: email,
+      firebaseId: firebaseId,
     });
 
     if (!admin) {

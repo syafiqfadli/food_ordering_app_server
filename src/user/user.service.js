@@ -12,14 +12,14 @@ class UserService {
   };
 
   static getUser = async (req, res) => {
-    const email = req.body.email;
+    const firebaseId = req.query.firebaseId;
 
-    if (!email) {
+    if (!firebaseId) {
       return ResponseEntity.errorNullResponse(res);
     }
 
     const user = await User.findOne({
-      email: email,
+      firebaseId: firebaseId,
     });
 
     if (!user) {
