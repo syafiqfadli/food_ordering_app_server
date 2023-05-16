@@ -5,7 +5,7 @@ class ResponseEntity {
     this.data = data;
   }
 
-  static successfulResponse = (obj, res) => {
+  static dataResponse = (obj, res) => {
     const response = new ResponseEntity({
       isSuccess: true,
       data: obj,
@@ -13,6 +13,16 @@ class ResponseEntity {
 
     return res.json(response);
   };
+
+  static messageResponse = (msg, res) => {
+    const response = new ResponseEntity({
+      isSuccess: true,
+      message: msg,
+    });
+
+    return res.json(response);
+  };
+
 
   static errorNullResponse = (res) => {
     const response = new ResponseEntity({

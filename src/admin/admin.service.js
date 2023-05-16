@@ -34,7 +34,7 @@ class AdminService {
 
     const admin = await Admin.create(req.body);
 
-    return ResponseEntity.successfulResponse({ admin }, res);
+    return ResponseEntity.successfulResponse(admin, res);
   };
 
   static updateAdmin = async (req, res) => {
@@ -61,7 +61,7 @@ class AdminService {
       return ResponseEntity.errorNotFoundResponse(adminObj, res);
     }
 
-    return ResponseEntity.successfulResponse({ admin }, res);
+    return ResponseEntity.successfulResponse(admin, res);
   };
 
   static deleteAdmin = async (req, res) => {
@@ -100,7 +100,7 @@ class AdminService {
       return ResponseEntity.errorNotFoundResponse(adminObj, res);
     }
 
-    return ResponseEntity.successfulResponse({ admin }, res);
+    return ResponseEntity.successfulResponse(admin, res);
   };
 
   static getOrder = async (req, res) => {
@@ -118,7 +118,7 @@ class AdminService {
       return ResponseEntity.errorNotFoundResponse(adminObj, res);
     }
 
-    return ResponseEntity.successfulResponse({ admin }, res);
+    return ResponseEntity.successfulResponse(admin, res);
   };
 
   static addRestaurant = async (req, res) => {
@@ -157,7 +157,7 @@ class AdminService {
       }
     ).select("restaurant");
 
-    return ResponseEntity.successfulResponse({ admin }, res);
+    return ResponseEntity.successfulResponse(admin, res);
   };
 
   static addMenu = async (req, res) => {
@@ -199,7 +199,7 @@ class AdminService {
       }
     ).select("restaurant.menu");
 
-    return ResponseEntity.successfulResponse({ admin }, res);
+    return ResponseEntity.successfulResponse(admin, res);
   };
 }
 

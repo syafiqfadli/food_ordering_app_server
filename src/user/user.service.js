@@ -8,7 +8,7 @@ class UserService {
   static getAllUsers = async (req, res) => {
     const users = await User.find({});
 
-    return ResponseEntity.successfulResponse({ users }, res);
+    return ResponseEntity.dataResponse({ users }, res);
   };
 
   static getUser = async (req, res) => {
@@ -26,7 +26,7 @@ class UserService {
       return ResponseEntity.errorNotFoundResponse(userObj, res);
     }
 
-    return ResponseEntity.successfulResponse({ user }, res);
+    return ResponseEntity.dataResponse(user, res);
   };
 
   static createUser = async (req, res) => {
@@ -47,74 +47,35 @@ class UserService {
       history: [],
     };
 
-    const user = await User.create(userBody);
+    await User.create(userBody);
 
-    return ResponseEntity.successfulResponse({ user }, res);
+    return ResponseEntity.messageResponse("User created successfully.", res);
   };
 
-  static updateUser = async (req, res) => {
-    const email = req.body.email;
-
-    if (!email) {
-      return ResponseEntity.errorNullResponse(res);
-    }
-
-    const user = await User.findOneAndUpdate(
-      {
-        email: email,
-      },
-      {
-        $set: req.body,
-      },
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
-
-    if (!user) {
-      return ResponseEntity.errorNotFoundResponse(userObj, res);
-    }
-
-    return ResponseEntity.successfulResponse({ user }, res);
-  };
-
-  static deleteUser = async (req, res) => {
-    const email = req.body.email;
-
-    if (!email) {
-      return ResponseEntity.errorNullResponse(res);
-    }
-
-    const user = await User.findOneAndDelete({
-      email: email,
-    });
-
-    if (!user) {
-      return ResponseEntity.errorNotFoundResponse(userObj, res);
-    }
-
-    return res.json({
-      isSuccess: true,
-      message: `User with email ${email} has been deleted.`,
-    });
-  };
-
+  
   static addToCart = async (req, res) => {
-    const email = req.body.email;
+    const firebaseId = req.body.firebaseId;
     const cartId = uid.generate();
     const restaurantId = req.body.restaurantId;
+    const restaurantName = req.body.restaurantName;
+    const price = req.body.price;
+    const quantity = req.body.quantity;
+
     const order = {
+      menuId: req.body.menuId,
       menu: req.body.menu,
-      price: req.body.price,
-      quantity: req.body.quantity,
+      price: price,
+      quantity: quantity,
+      totalPrice: price * quantity,
     };
-
+    
     let cart = {};
-
+    
     if (
-      !email ||
+      !firebaseId ||
       !restaurantId ||
+      !restaurantName ||
+      !order.menuId ||
       !order.menu ||
       !order.price ||
       !order.quantity
@@ -123,13 +84,13 @@ class UserService {
     }
 
     const user = await User.findOne({
-      email: email,
+      firebaseId: firebaseId,
     });
-
+    
     if (!user) {
       return ResponseEntity.errorNotFoundResponse(userObj, res);
     }
-
+    
     cart = await User.findOneAndUpdate(
       {
         "cart.restaurantId": restaurantId,
@@ -143,19 +104,20 @@ class UserService {
         new: true,
         runValidators: true,
       }
-    ).select("cart");
+      ).select("cart");
 
-    if (!cart) {
-      cart = await User.findOneAndUpdate(
-        {
-          email: email,
+      if (!cart) {
+        cart = await User.findOneAndUpdate(
+          {
+            firebaseId: firebaseId,
         },
         {
           $push: {
             cart: {
               cartId: cartId,
               restaurantId: restaurantId,
-              orderList: [order],
+              restaurantName: restaurantName,
+              menuList: [order],
             },
           },
         },
@@ -166,18 +128,41 @@ class UserService {
       ).select("cart");
     }
 
-    return ResponseEntity.successfulResponse({ cart }, res);
+    return ResponseEntity.messageResponse("Added to cart successfully.", res);
   };
-
+  
   static checkoutOrder = async (req, res) => {
     const orderId = uid.generate();
     const cartId = req.body.cartId;
-
+    
     if (!cartId) {
       return ResponseEntity.errorNullResponse(res);
     }
 
-    const order = await User.findOneAndUpdate(
+    const cart = await User.aggregate([
+      {
+        $unwind: "$cart"
+      },
+      {
+        $match: {
+          "cart.cartId": cartId
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          restaurantId: "$cart.restaurantId",
+          restaurantName: "$cart.restaurantName",
+          menuList: "$cart.menuList"
+        }
+      }
+    ])
+
+    if (cart.length === 0) {
+      return ResponseEntity.errorNotFoundResponse("Cart", res);
+    }
+    
+    await User.findOneAndUpdate(
       {
         "cart.cartId": cartId,
       },
@@ -185,6 +170,10 @@ class UserService {
         $push: {
           order: {
             orderId: orderId,
+            restaurantId: cart[0].restaurantId,
+            restaurantName: cart[0].restaurantName,
+            status: "In the kitchen",
+            orderList: cart[0].menuList,
           },
         },
         $pull: {
@@ -197,31 +186,27 @@ class UserService {
         new: true,
         runValidators: true,
       }
-    ).select("order");
-
-    if (!order) {
-      return ResponseEntity.errorNotFoundResponse("Cart", res);
-    }
-
-    return ResponseEntity.successfulResponse({ order }, res);
+      ).select("order");
+      
+      return ResponseEntity.messageResponse("Checked out successfully.", res);
   };
-
-  static getCart = async (req, res) => {
+  
+  static deleteUser = async (req, res) => {
     const email = req.body.email;
-
+  
     if (!email) {
       return ResponseEntity.errorNullResponse(res);
     }
-
-    const cart = await User.findOne({
+  
+    const user = await User.findOneAndDelete({
       email: email,
-    }).select("cart");
-
-    if (!cart) {
+    });
+  
+    if (!user) {
       return ResponseEntity.errorNotFoundResponse(userObj, res);
     }
 
-    return ResponseEntity.successfulResponse({ cart }, res);
+    return ResponseEntity.messageResponse(`User with email ${email} has been deleted.`, res);
   };
 }
 

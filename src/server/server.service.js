@@ -6,7 +6,7 @@ class ServerService {
       isOnline: true,
     };
 
-    return ResponseEntity.successfulResponse(server, res);
+    return ResponseEntity.dataResponse(server, res);
   };
 }
 
