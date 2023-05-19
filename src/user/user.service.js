@@ -65,7 +65,6 @@ class UserService {
       menuName: req.body.menuName,
       price: price,
       quantity: quantity,
-      totalPrice: (price * quantity).toFixed(2),
     };
 
     let cart = {};
@@ -90,6 +89,30 @@ class UserService {
       return ResponseEntity.errorNotFoundResponse(userObj, res);
     }
 
+    const menuId = await User.findOneAndUpdate(
+      {
+        "cart.menuList.menuId": order.menuId,
+      }, 
+      {
+        $inc: {
+          "cart.$[].menuList.$[menuList].quantity": order.quantity,
+        }
+      },
+      {
+        "multi": false,
+        "upsert": false,
+        arrayFilters: [
+          {
+            "menuList.menuId": { $eq: order.menuId }
+          }
+        ]
+      }
+    )
+
+    if (menuId) {
+      return ResponseEntity.messageResponse("Updated cart successfully.", res);
+    }
+
     cart = await User.findOneAndUpdate(
       {
         "cart.restaurantId": restaurantId,
@@ -103,7 +126,7 @@ class UserService {
         new: true,
         runValidators: true,
       }
-    ).select("cart");
+    );
 
     if (!cart) {
       cart = await User.findOneAndUpdate(
