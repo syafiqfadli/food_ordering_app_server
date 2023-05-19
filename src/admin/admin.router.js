@@ -6,6 +6,9 @@ const AdminService = require("./admin.service");
 adminRouter.route("/admin/info").get(AdminService.getAdmin);
 adminRouter.route("/admin/restaurant-list").get(AdminService.getAllRestaurant);
 adminRouter.route("/admin/order").get(AdminService.getOrder);
+adminRouter
+  .route("/admin/search-restaurant")
+  .get(AdminService.searchRestaurant);
 
 //POST
 adminRouter.route("/admin/create").post(AdminService.createAdmin);

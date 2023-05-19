@@ -19,5 +19,7 @@ userRouter.route("/user/checkout-order").patch(UserService.checkoutOrder);
 
 //DELETE
 userRouter.route("/user/delete").delete(UserService.deleteUser);
+userRouter.route("/user/delete-cart").delete(UserService.deleteCart);
+userRouter.route("/user/delete-menu").delete(UserService.deleteMenu);
 
 module.exports = userRouter;

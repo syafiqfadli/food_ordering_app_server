@@ -52,7 +52,6 @@ class UserService {
     return ResponseEntity.messageResponse("User created successfully.", res);
   };
 
-  
   static addToCart = async (req, res) => {
     const firebaseId = req.body.firebaseId;
     const cartId = uid.generate();
@@ -63,20 +62,20 @@ class UserService {
 
     const order = {
       menuId: req.body.menuId,
-      menu: req.body.menu,
+      menuName: req.body.menuName,
       price: price,
       quantity: quantity,
-      totalPrice: price * quantity,
+      totalPrice: (price * quantity).toFixed(2),
     };
-    
+
     let cart = {};
-    
+
     if (
       !firebaseId ||
       !restaurantId ||
       !restaurantName ||
       !order.menuId ||
-      !order.menu ||
+      !order.menuName ||
       !order.price ||
       !order.quantity
     ) {
@@ -86,11 +85,11 @@ class UserService {
     const user = await User.findOne({
       firebaseId: firebaseId,
     });
-    
+
     if (!user) {
       return ResponseEntity.errorNotFoundResponse(userObj, res);
     }
-    
+
     cart = await User.findOneAndUpdate(
       {
         "cart.restaurantId": restaurantId,
@@ -104,12 +103,12 @@ class UserService {
         new: true,
         runValidators: true,
       }
-      ).select("cart");
+    ).select("cart");
 
-      if (!cart) {
-        cart = await User.findOneAndUpdate(
-          {
-            firebaseId: firebaseId,
+    if (!cart) {
+      cart = await User.findOneAndUpdate(
+        {
+          firebaseId: firebaseId,
         },
         {
           $push: {
@@ -125,43 +124,43 @@ class UserService {
           new: true,
           runValidators: true,
         }
-      ).select("cart");
+      );
     }
 
     return ResponseEntity.messageResponse("Added to cart successfully.", res);
   };
-  
+
   static checkoutOrder = async (req, res) => {
     const orderId = uid.generate();
     const cartId = req.body.cartId;
-    
+
     if (!cartId) {
       return ResponseEntity.errorNullResponse(res);
     }
 
     const cart = await User.aggregate([
       {
-        $unwind: "$cart"
+        $unwind: "$cart",
       },
       {
         $match: {
-          "cart.cartId": cartId
-        }
+          "cart.cartId": cartId,
+        },
       },
       {
         $project: {
           _id: 0,
           restaurantId: "$cart.restaurantId",
           restaurantName: "$cart.restaurantName",
-          menuList: "$cart.menuList"
-        }
-      }
-    ])
+          menuList: "$cart.menuList",
+        },
+      },
+    ]);
 
     if (cart.length === 0) {
       return ResponseEntity.errorNotFoundResponse("Cart", res);
     }
-    
+
     await User.findOneAndUpdate(
       {
         "cart.cartId": cartId,
@@ -186,27 +185,97 @@ class UserService {
         new: true,
         runValidators: true,
       }
-      ).select("order");
-      
-      return ResponseEntity.messageResponse("Checked out successfully.", res);
+    );
+
+    return ResponseEntity.messageResponse("Checked out successfully.", res);
   };
-  
+
+  static deleteCart = async (req, res) => {
+    const cartId = req.body.cartId;
+
+    if (!cartId) {
+      return ResponseEntity.errorNullResponse(res);
+    }
+
+    const cart = await User.findOneAndUpdate(
+      {
+        "cart.cartId": cartId,
+      },
+      {
+        $pull: {
+          cart: {
+            cartId: cartId,
+          },
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!cart) {
+      return ResponseEntity.errorNotFoundResponse("Cart", res);
+    }
+
+    return ResponseEntity.messageResponse("Deleted cart successfully.", res);
+  };
+
+  static deleteMenu = async (req, res) => {
+    const cartId = req.body.cartId;
+    const menuId = req.body.menuId;
+
+    if (!cartId || !menuId) {
+      return ResponseEntity.errorNullResponse(res);
+    }
+
+    const menu = await User.findOneAndUpdate(
+      {
+        "cart.cartId": cartId,
+        "cart.menuList.menuId": menuId,
+      },
+      {
+        $pull: {
+          "cart.$.menuList": {
+            menuId: menuId,
+          },
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!menu) {
+      return ResponseEntity.errorNotFoundResponse("Menu", res);
+    }
+
+    return ResponseEntity.messageResponse(
+      "Deleted menu in cart successfully.",
+      res
+    );
+  };
+
   static deleteUser = async (req, res) => {
     const email = req.body.email;
-  
+
     if (!email) {
       return ResponseEntity.errorNullResponse(res);
     }
-  
+
     const user = await User.findOneAndDelete({
       email: email,
     });
-  
+
     if (!user) {
       return ResponseEntity.errorNotFoundResponse(userObj, res);
     }
 
-    return ResponseEntity.messageResponse(`User with email ${email} has been deleted.`, res);
+    return ResponseEntity.messageResponse(
+      `User with email ${email} has been deleted.`,
+      res
+    );
   };
 }
 
