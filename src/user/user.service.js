@@ -1,5 +1,6 @@
 const uid = require("short-uuid");
 const User = require("./user.schema");
+const Admin = require("../admin/admin.schema");
 const userObj = "User";
 
 const ResponseEntity = require("../entities/response.entity");
@@ -195,6 +196,27 @@ class UserService {
       }
     }
 
+    const restaurant = await Admin.findOneAndUpdate(
+      {
+        "restaurant.restaurantId": cart[0].restaurantId,
+      },
+      {
+        $push: {
+          order: {
+            orderId: orderId,
+            restaurantId: cart[0].restaurantId,
+            restaurantName: cart[0].restaurantName,
+            status: "In the kitchen",
+            orderList: cart[0].menuList,
+          },
+        },
+      }
+    )
+
+    if (!restaurant) {
+      return ResponseEntity.errorNotFoundResponse("Restaurant", res);
+    }
+
     await User.findOneAndUpdate(
       {
         "cart.cartId": cartId,
@@ -223,6 +245,56 @@ class UserService {
 
     return ResponseEntity.messageResponse("Checked out successfully.", true, res);
   };
+
+  static completeOrder = async (req, res) => {
+    const orderId = req.body.orderId;
+
+    if (!orderId) {
+      return ResponseEntity.errorNullResponse(res);
+    }
+
+    const admin = await Admin.findOneAndUpdate(
+      {
+        "order.orderId": orderId,
+      },
+      {
+        $set: {
+          "order.$.status": "Completed" 
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!admin) {
+      return ResponseEntity.errorNotFoundResponse("Admin Order", res);
+    }
+
+    const user = await User.findOneAndUpdate(
+      {
+        "order.orderId": orderId,
+      },
+      {
+        $push: {
+          history: {
+            //TODO: PUSH TO HISTORY
+          }
+        }
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!user) {
+      return ResponseEntity.errorNotFoundResponse("User Order", res);
+    }
+
+    return ResponseEntity.messageResponse("Status updated successfully.", true, res)
+  }
 
   static deleteCart = async (req, res) => {
     const cartId = req.body.cartId;

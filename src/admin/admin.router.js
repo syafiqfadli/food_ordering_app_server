@@ -5,7 +5,7 @@ const AdminService = require("./admin.service");
 //GET
 adminRouter.route("/admin/info").get(AdminService.getAdmin);
 adminRouter.route("/admin/restaurant-list").get(AdminService.getAllRestaurant);
-adminRouter.route("/admin/order").get(AdminService.getOrder);
+adminRouter.route("/admin/order-status").get(AdminService.getOrderStatus);
 adminRouter
   .route("/admin/search-restaurant")
   .get(AdminService.searchRestaurant);
@@ -14,9 +14,9 @@ adminRouter
 adminRouter.route("/admin/create").post(AdminService.createAdmin);
 
 //PATCH
-adminRouter.route("/admin/update").patch(AdminService.updateAdmin);
 adminRouter.route("/admin/add-restaurant").patch(AdminService.addRestaurant);
 adminRouter.route("/admin/add-menu").patch(AdminService.addMenu);
+adminRouter.route("/admin/update-status").patch(AdminService.updateStatus);
 
 //DELETE
 adminRouter.route("/admin/delete").delete(AdminService.deleteAdmin);

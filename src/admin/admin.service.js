@@ -1,5 +1,6 @@
 const uid = require("short-uuid");
 const Admin = require("./admin.schema");
+const User = require("../user/user.schema");
 const adminObj = "Admin";
 
 const ResponseEntity = require("../entities/response.entity");
@@ -45,33 +46,6 @@ class AdminService {
     return ResponseEntity.messageResponse("Admin created successfully.", true, res);
   };
 
-  static updateAdmin = async (req, res) => {
-    const firebaseId = req.body.firebaseId;
-
-    if (!firebaseId) {
-      return ResponseEntity.errorNullResponse(res);
-    }
-
-    const admin = await Admin.findOneAndUpdate(
-      {
-        firebaseId: firebaseId,
-      },
-      {
-        $set: req.body,
-      },
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
-
-    if (!admin) {
-      return ResponseEntity.errorNotFoundResponse(adminObj, res);
-    }
-
-    return ResponseEntity.messageResponse("Admin updated successfully.", true, res);
-  };
-
   static deleteAdmin = async (req, res) => {
     const firebaseId = req.body.firebaseId;
 
@@ -110,6 +84,33 @@ class AdminService {
     ]);
 
     return ResponseEntity.dataResponse({ restaurant }, res);
+  };
+
+  static getOrderStatus = async (req, res) => {
+    const status = req.query.status;
+
+    if (!status) {
+      return ResponseEntity.errorNullResponse(res);
+    }
+
+    const order = await Admin.aggregate([
+      {
+        $unwind: "$order",
+      },
+      {
+        $match: {
+          "order.status": status,
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          status: "$order.status",
+        },
+      },
+    ]);
+
+    return ResponseEntity.dataResponse({ order }, res);
   };
 
   static searchRestaurant = async (req, res) => {
@@ -151,24 +152,6 @@ class AdminService {
     }
 
     return ResponseEntity.dataResponse({ restaurant }, res);
-  };
-
-  static getOrder = async (req, res) => {
-    const firebaseId = req.body.firebaseId;
-
-    if (!firebaseId) {
-      return ResponseEntity.errorNullResponse(res);
-    }
-
-    const admin = await Admin.findOne({
-      firebaseId: firebaseId,
-    }).select("order");
-
-    if (!admin) {
-      return ResponseEntity.errorNotFoundResponse(adminObj, res);
-    }
-
-    return ResponseEntity.dataResponse(admin, res);
   };
 
   static addRestaurant = async (req, res) => {
@@ -243,7 +226,7 @@ class AdminService {
             menuId: menuId,
             menuName: menuName,
             description: description,
-            price: price,
+            price: (price + 0.0000001),
           },
         },
       },
@@ -255,6 +238,54 @@ class AdminService {
 
     return ResponseEntity.dataResponse("Menu added successfully.", res);
   };
+
+  static updateStatus = async (req, res) =>  {
+    const orderId = req.body.orderId;
+
+    if (!orderId) {
+      return ResponseEntity.errorNullResponse(res);
+    }
+
+    const admin = await Admin.findOneAndUpdate(
+      {
+        "order.orderId": orderId,
+      },
+      {
+        $set: {
+          "order.$.status": "Out of delivery" 
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!admin) {
+      return ResponseEntity.errorNotFoundResponse("Admin Order", res);
+    }
+
+    const user = await User.findOneAndUpdate(
+      {
+        "order.orderId": orderId,
+      },
+      {
+        $set: {
+          "order.$.status": "Out of delivery" 
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!user) {
+      return ResponseEntity.errorNotFoundResponse("User Order", res);
+    }
+
+    return ResponseEntity.messageResponse("Status updated successfully.", true, res)
+  }
 }
 
 module.exports = AdminService;
