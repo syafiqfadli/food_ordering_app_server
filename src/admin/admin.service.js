@@ -42,7 +42,7 @@ class AdminService {
 
     await Admin.create(adminBody);
 
-    return ResponseEntity.messageResponse("Admin created successfully.", res);
+    return ResponseEntity.messageResponse("Admin created successfully.", true, res);
   };
 
   static updateAdmin = async (req, res) => {
@@ -69,7 +69,7 @@ class AdminService {
       return ResponseEntity.errorNotFoundResponse(adminObj, res);
     }
 
-    return ResponseEntity.messageResponse("Admin updated successfully.", res);
+    return ResponseEntity.messageResponse("Admin updated successfully.", true, res);
   };
 
   static deleteAdmin = async (req, res) => {
@@ -89,6 +89,7 @@ class AdminService {
 
     return ResponseEntity.messageResponse(
       `Admin with firebaseId ${firebaseId} has been deleted.`,
+      true,
       res
     );
   };
@@ -208,6 +209,7 @@ class AdminService {
 
     return ResponseEntity.messageResponse(
       "Restaurant added successfully.",
+      true,
       res
     );
   };

@@ -14,9 +14,9 @@ class ResponseEntity {
     return res.json(response);
   };
 
-  static messageResponse = (msg, res) => {
+  static messageResponse = (msg, result, res) => {
     const response = new ResponseEntity({
-      isSuccess: true,
+      isSuccess: result,
       message: msg,
     });
 

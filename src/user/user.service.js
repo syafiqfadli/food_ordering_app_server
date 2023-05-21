@@ -49,7 +49,7 @@ class UserService {
 
     await User.create(userBody);
 
-    return ResponseEntity.messageResponse("User created successfully.", res);
+    return ResponseEntity.messageResponse("User created successfully.", true, res);
   };
 
   static addToCart = async (req, res) => {
@@ -110,7 +110,7 @@ class UserService {
     )
 
     if (menuId) {
-      return ResponseEntity.messageResponse("Updated cart successfully.", res);
+      return ResponseEntity.messageResponse("Updated cart successfully.", true, res);
     }
 
     cart = await User.findOneAndUpdate(
@@ -150,14 +150,15 @@ class UserService {
       );
     }
 
-    return ResponseEntity.messageResponse("Added to cart successfully.", res);
+    return ResponseEntity.messageResponse("Added to cart successfully.", true, res);
   };
 
   static checkoutOrder = async (req, res) => {
     const orderId = uid.generate();
     const cartId = req.body.cartId;
+    const restaurantId = req.body.restaurantId;
 
-    if (!cartId) {
+    if (!cartId || !restaurantId) {
       return ResponseEntity.errorNullResponse(res);
     }
 
@@ -182,6 +183,16 @@ class UserService {
 
     if (cart.length === 0) {
       return ResponseEntity.errorNotFoundResponse("Cart", res);
+    }
+
+    const user = await User.findOne({
+      "cart.cartId": cartId
+    });
+
+    for (let index = 0; index < user.order.length; index++) {
+      if (restaurantId === user.order[index].restaurantId) {
+        return ResponseEntity.messageResponse("Order from same restaurant is on going.", false, res);
+      }
     }
 
     await User.findOneAndUpdate(
@@ -210,7 +221,7 @@ class UserService {
       }
     );
 
-    return ResponseEntity.messageResponse("Checked out successfully.", res);
+    return ResponseEntity.messageResponse("Checked out successfully.", true, res);
   };
 
   static deleteCart = async (req, res) => {
@@ -241,7 +252,7 @@ class UserService {
       return ResponseEntity.errorNotFoundResponse("Cart", res);
     }
 
-    return ResponseEntity.messageResponse("Deleted cart successfully.", res);
+    return ResponseEntity.messageResponse("Deleted cart successfully.", true, res);
   };
 
   static deleteMenu = async (req, res) => {
@@ -276,6 +287,7 @@ class UserService {
 
     return ResponseEntity.messageResponse(
       "Deleted menu in cart successfully.",
+      true,
       res
     );
   };
@@ -297,6 +309,7 @@ class UserService {
 
     return ResponseEntity.messageResponse(
       `User with email ${email} has been deleted.`,
+      true,
       res
     );
   };
