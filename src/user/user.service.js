@@ -206,6 +206,7 @@ class UserService {
             orderId: orderId,
             restaurantId: cart[0].restaurantId,
             restaurantName: cart[0].restaurantName,
+            customerName: user.name,
             status: "In the kitchen",
             orderList: cart[0].menuList,
           },
@@ -247,6 +248,7 @@ class UserService {
   };
 
   static completeOrder = async (req, res) => {
+    const historyId = uid.generate();
     const orderId = req.body.orderId;
 
     if (!orderId) {
@@ -269,7 +271,33 @@ class UserService {
     );
 
     if (!admin) {
-      return ResponseEntity.errorNotFoundResponse("Admin Order", res);
+      return ResponseEntity.errorNotFoundResponse("Order", res);
+    }
+
+    const order = await User.aggregate([
+      {
+        $unwind: "$order",
+      },
+      {
+        $match: {
+          "order.orderId": orderId,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          historyId: historyId,
+          orderId: "$order.orderId",
+          restaurantName: "$order.restaurantName",
+          customerName: "$order.customerName",
+          completedAt: new Date(),
+          orderList: "$order.orderList",
+        },
+      },
+    ]);
+
+    if (order.length === 0) {
+      return ResponseEntity.errorNotFoundResponse("Order", res);
     }
 
     const user = await User.findOneAndUpdate(
@@ -278,8 +306,11 @@ class UserService {
       },
       {
         $push: {
-          history: {
-            //TODO: PUSH TO HISTORY
+          history: order[0]
+        },
+        $pull: {
+          order: {
+            orderId: orderId
           }
         }
       },
@@ -290,10 +321,10 @@ class UserService {
     );
 
     if (!user) {
-      return ResponseEntity.errorNotFoundResponse("User Order", res);
+      return ResponseEntity.errorNotFoundResponse("Order", res);
     }
 
-    return ResponseEntity.messageResponse("Status updated successfully.", true, res)
+    return ResponseEntity.messageResponse("Order completed.", true, res)
   }
 
   static deleteCart = async (req, res) => {

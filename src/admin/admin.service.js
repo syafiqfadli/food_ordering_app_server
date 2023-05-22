@@ -87,9 +87,10 @@ class AdminService {
   };
 
   static getOrderStatus = async (req, res) => {
+    const firebaseId = req.query.firebaseId;
     const status = req.query.status;
 
-    if (!status) {
+    if (!status || !firebaseId) {
       return ResponseEntity.errorNullResponse(res);
     }
 
@@ -99,7 +100,10 @@ class AdminService {
       },
       {
         $match: {
-          "order.status": status,
+          $and: [
+            {"firebaseId": firebaseId},
+            {"order.status": status,}
+          ]
         }
       },
       {
