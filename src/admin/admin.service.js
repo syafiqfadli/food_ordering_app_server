@@ -141,6 +141,11 @@ class AdminService {
                 $regex: new RegExp(restaurantQuery, "i"),
               },
             },
+            {
+              "restaurant.menuList.description": {
+                $regex: new RegExp(restaurantQuery, "i"),
+              },
+            },
           ],
         },
       },
@@ -150,10 +155,6 @@ class AdminService {
         },
       },
     ]);
-
-    if (restaurant.length == 0) {
-      return ResponseEntity.dataResponse({ restaurant }, res);
-    }
 
     return ResponseEntity.dataResponse({ restaurant }, res);
   };
