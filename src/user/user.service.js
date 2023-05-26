@@ -6,12 +6,6 @@ const userObj = "User";
 const ResponseEntity = require("../entities/response.entity");
 
 class UserService {
-  static getAllUsers = async (req, res) => {
-    const users = await User.find({});
-
-    return ResponseEntity.dataResponse({ users }, res);
-  };
-
   static getUser = async (req, res) => {
     const firebaseId = req.query.firebaseId;
 
@@ -289,7 +283,7 @@ class UserService {
           historyId: historyId,
           orderId: "$order.orderId",
           restaurantName: "$order.restaurantName",
-          customerName: "$order.customerName",
+          status: "Completed",
           completedAt: new Date(),
           orderList: "$order.orderList",
         },
@@ -390,6 +384,90 @@ class UserService {
 
     return ResponseEntity.messageResponse(
       "Deleted menu in cart successfully.",
+      true,
+      res
+    );
+  };
+
+  static cancelOrder = async (req, res) => {
+    const historyId = uid.generate();
+    const orderId = req.body.orderId;
+
+    if (!orderId) {
+      return ResponseEntity.errorNullResponse(res);
+    }
+
+    const orderInfo = await User.aggregate([
+      {
+        $unwind: "$order",
+      },
+      {
+        $match: {
+          "order.orderId": orderId,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          historyId: historyId,
+          orderId: "$order.orderId",
+          restaurantName: "$order.restaurantName",
+          status: "Cancelled",
+          completedAt: new Date(),
+          orderList: "$order.orderList",
+        },
+      },
+    ]);
+
+    if (orderInfo.length === 0) {
+      return ResponseEntity.errorNotFoundResponse("Order", res);
+    }
+
+    const admin = await Admin.findOneAndUpdate(
+      {
+        "order.orderId": orderId
+      },
+      {
+        $set: {
+          "order.$.status": "Cancelled"
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!admin) {
+      return ResponseEntity.errorNotFoundResponse("Order", res);
+    }
+
+    const order = await User.findOneAndUpdate(
+      {
+        "order.orderId": orderId
+      },
+      {
+        $push: {
+          history: orderInfo[0]
+        },
+        $pull: {
+          order: {
+            orderId: orderId
+          }
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!order) {
+      return ResponseEntity.errorNotFoundResponse("Order", res);
+    }
+
+    return ResponseEntity.messageResponse(
+      "Order cancelled successfully.",
       true,
       res
     );

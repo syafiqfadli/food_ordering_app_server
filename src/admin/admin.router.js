@@ -15,7 +15,11 @@ adminRouter.route("/admin/create").post(AdminService.createAdmin);
 
 //PATCH
 adminRouter.route("/admin/add-restaurant").patch(AdminService.addRestaurant);
+adminRouter.route("/admin/edit-restaurant").patch(AdminService.editRestaurant);
+adminRouter.route("/admin/delete-restaurant").patch(AdminService.deleteRestaurant);
 adminRouter.route("/admin/add-menu").patch(AdminService.addMenu);
+adminRouter.route("/admin/edit-menu").patch(AdminService.editMenu);
+adminRouter.route("/admin/delete-menu").patch(AdminService.deleteMenu);
 adminRouter.route("/admin/update-status").patch(AdminService.updateStatus);
 
 //DELETE

@@ -109,6 +109,7 @@ class AdminService {
       {
         $project: {
           _id: 0,
+          orderId: "$order.orderId",
           status: "$order.status",
         },
       },
@@ -202,6 +203,67 @@ class AdminService {
     );
   };
 
+  static editRestaurant = async (req, res) => {
+    const restaurantId = req.body.restaurantId;
+    const restaurantName = req.body.restaurantName;
+
+    if (!restaurantId || !restaurantName) {
+      return ResponseEntity.errorNullResponse(res);
+    }
+
+    const restaurant = await Admin.findOneAndUpdate(
+      {
+        "restaurant.restaurantId": restaurantId,
+      },
+      {
+        $set: {
+          "restaurant.$.restaurantName": restaurantName
+        }
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!restaurant) {
+      return ResponseEntity.errorNotFoundResponse("Restaurant", res);
+    }
+
+    return ResponseEntity.messageResponse("Restaurant updated successfully.", true, res);
+  };
+
+  static deleteRestaurant = async (req, res) => {
+    const restaurantId = req.body.restaurantId;
+
+    if (!restaurantId) {
+      return ResponseEntity.errorNullResponse(res);
+    }
+
+    const restaurant = await Admin.findOneAndUpdate(
+      {
+        "restaurant.restaurantId": restaurantId,
+      },
+      {
+        $pull: {
+          restaurant: {
+            restaurantId: restaurantId
+          }
+        }
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!restaurant) {
+      return ResponseEntity.errorNotFoundResponse("Restaurant", res);
+    }
+
+    return ResponseEntity.messageResponse("Restaurant deleted successfully.", true, res);
+  };
+
   static addMenu = async (req, res) => {
     const restaurantId = req.body.restaurantId;
     const menuId = uid.generate();
@@ -241,7 +303,88 @@ class AdminService {
       }
     );
 
-    return ResponseEntity.dataResponse("Menu added successfully.", res);
+    return ResponseEntity.messageResponse("Menu added successfully.", true, res);
+  };
+
+  static editMenu = async (req, res) => {
+    const restaurantId = req.body.restaurantId;
+    const menuId = req.body.menuId;
+    const menuName = req.body.menuName;
+    const description = req.body.description;
+    const price = req.body.price;
+
+    if (!restaurantId || !menuId || !menuName || !description || !price) {
+      return ResponseEntity.errorNullResponse(res);
+    }
+
+    const restaurantFind = await Admin.findOne({
+      "restaurant.restaurantId": restaurantId,
+    });
+
+    if (!restaurantFind) {
+      return ResponseEntity.errorNotFoundResponse("Restaurant", res);
+    }
+
+    const menu = await Admin.findOneAndUpdate(
+      {
+        "restaurant.menuList.menuId": menuId,
+      },
+      {
+        $set: {
+          "restaurant.$.menuList.$[menuList].menuName": menuName,
+          "restaurant.$.menuList.$[menuList].description": description,
+          "restaurant.$.menuList.$[menuList].price": price,
+        }
+      },
+      {
+        "multi": false,
+        "upsert": false,
+        arrayFilters: [
+          {
+            "menuList.menuId": { $eq: menuId }
+          }
+        ]
+      }
+    );
+
+    if (!menu) {
+      return ResponseEntity.errorNotFoundResponse("Menu", res);
+    }
+
+    return ResponseEntity.messageResponse("Menu updated successfully.", true, res);
+  };
+
+  static deleteMenu = async (req, res) => {
+    const restaurantId = req.body.restaurantId;
+    const menuId = req.body.menuId;
+
+    if (!menuId || !restaurantId) {
+      return ResponseEntity.errorNullResponse(res);
+    }
+
+    const menu = await Admin.findOneAndUpdate(
+      {
+        "restaurant.restaurantId": restaurantId,
+        "restaurant.menuList.menuId": menuId,
+      },
+      {
+        $pull: {
+          "restaurant.0.menuList": {
+            menuId: menuId
+          }
+        }
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!menu) {
+      return ResponseEntity.errorNotFoundResponse("Menu", res);
+    }
+
+    return ResponseEntity.messageResponse("Menu deleted successfully.", true, res);
   };
 
   static updateStatus = async (req, res) =>  {
