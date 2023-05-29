@@ -333,7 +333,7 @@ class AdminService {
         $set: {
           "restaurant.$.menuList.$[menuList].menuName": menuName,
           "restaurant.$.menuList.$[menuList].description": description,
-          "restaurant.$.menuList.$[menuList].price": price,
+          "restaurant.$.menuList.$[menuList].price": (price + 0.0000001),
         }
       },
       {
